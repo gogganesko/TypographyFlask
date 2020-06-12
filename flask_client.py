@@ -1,3 +1,5 @@
+import random
+import string
 import json
 import requests
 from os import system
@@ -40,8 +42,7 @@ def print_orders_by_date(orders):
 
 def start_client(): # Основная функция, запускающая клиента. Эта функция вызывается в конце файла, после определения всех нужных деталей
     isauth = 0
-    authuserid = 0
-    currentuser = {}
+    token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16)) 
     print ("Подключились к серверу")
 
 
@@ -93,14 +94,14 @@ def start_client(): # Основная функция, запускающая к
             order = {}    
             order["ServiceID"] = int(input("Введите ID услуги:"))
             order["Count"] = input("Введите количество:")    
-            order["ClientID"] = currentuser["_id"]
+            order["ClientToken"] = token
             response = requests.post(url, data=order)
             print(response.text)
         if (task == 3):
             exit(0)
         if (task == 4):
             url = URL + '/read_orders'
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]) })            
+            response = requests.get(url, headers={'userToken':str(token) })            
             orders = loads(response.text)
             print_orders(orders)
         if (task == 5):
@@ -114,13 +115,13 @@ def start_client(): # Основная функция, запускающая к
             if response.text == "Ошибка авторизации":
                 print("Неправильный логин или пароль")
             else: 
-                currentuser = loads(response.text)
+                token = response.text
                 isauth = 1
-                print("Вы авторизовались:" + currentuser["Name"])
+                print("Вы авторизовались")
         if (task == 6):
             url = URL + '/logout'
             msg = {}
-            msg["UserID"] = currentuser["_id"]
+            msg["Token"] = token
             response = requests.post(url, data=msg)
             isauth = 0
             print(response.text)
@@ -129,46 +130,46 @@ def start_client(): # Основная функция, запускающая к
             password = str(input("Введите новый пароль:"))
             msg = {}
             msg["Password"] = password
-            msg["UserId"] = currentuser["_id"]
+            msg["Token"] = token
             response = requests.post(url, data=msg)
             print(response.text)
         if (task == 8):
             url = URL + '/read_orders'
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]) })            
+            response = requests.get(url, headers={'userToken':str(token) })            
             orders = loads(response.text)
             print_orders(orders)
             url = URL + "/add_chatmessage"
             chatmessage = {}
             chatmessage["OrderID"] = int(input("Введите ID заказа:"))
             chatmessage["Message"] = str(input("Введите текст сообщения:"))
-            chatmessage["ClientID"] = currentuser["_id"]
+            chatmessage["ClientToken"] = token
             response = requests.post(url, data=chatmessage)
             print(response.text)
         if (task == 9):
             url = URL + '/read_orders'
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]) })            
+            response = requests.get(url, headers={'userToken':str(token) })            
             orders = loads(response.text)
             print_orders(orders)
             OrderID = int(input("Введите ID заказа:"))
             url = URL + "/read_order"
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]), 'OrderID':str(OrderID)})
+            response = requests.get(url, headers={'userToken':str(token), 'OrderID':str(OrderID)})
             order = loads(response.text)
             print_order(order)
         if (task == 10):
             url = URL + '/read_orders'
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]) })            
+            response = requests.get(url, headers={'userToken':str(token) })            
             orders = loads(response.text)
             print_orders(orders)
             OrderID = int(input("Введите ID заказа:"))
             url = URL + '/read_chatmessages'
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]), 'orderID':str(OrderID)})
+            response = requests.get(url, headers={'userToken':str(token), 'orderID':str(OrderID)})
             chatmessage = loads(response.text)
             print_chat(chatmessage)
         if (task == 11):
             StartDate = str(input("Введите начальную дату для поиска в формате\nгггг,мм,дд:"))
             EndDate = str(input("Введите конечную дату для поиска в формате\nгггг,мм,дд:"))
             url = URL + '/read_orders_by_date'
-            response = requests.get(url, headers={'userID':str(currentuser["_id"]), 'StartDate':StartDate, 'EndDate':EndDate})
+            response = requests.get(url, headers={'Token':str(token), 'StartDate':StartDate, 'EndDate':EndDate})
             orders = loads(response.text)
             print_orders(orders)
 start_client()

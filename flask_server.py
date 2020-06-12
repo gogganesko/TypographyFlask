@@ -29,25 +29,28 @@ app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/Typography"
 mongo = PyMongo(app)
 
-def check_token(user):
-    token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))    
-    col = mongo.db["Persons"].find_one({"_id":int(user["_id"])})
-    token = col["Token"]
-    if user["Token"] == token:
-        return True
-    else: 
+def check_token(token):
+    chekingToken = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))    
+    col = mongo.db["Persons"].find_one({"Token":str(token)})
+    if col:
+        chekingToken = col["Token"]
+        if chekingToken == token:
+            return True
+        else: 
+            return False
+    else:
         return False
 
 @app.route("/add_order",  methods=['POST'])
 def add_order():
     add_operation_in_journal('add_order')
-    userID = int(request.form["ClientID"])
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
+    token = str(request.form["ClientToken"])
+    user = mongo.db["Persons"].find_one({"Token":token})
+    if check_token(user["Token"]):
         neworder = {}
         ServiceID = int(request.form['ServiceID'])
         Count = int(request.form["Count"])
-        ClientID = int(request.form["ClientID"])
+        ClientID = int(user["_id"])
         neworder["_id"] = (get_max_id("Orders")) + 1
         neworder["Client"] = find_by_id(ClientID, "Persons")
         neworder["Service"] = find_by_id(ServiceID, "Services")
@@ -62,14 +65,14 @@ def add_order():
 @app.route("/add_chatmessage", methods=['POST'])
 def add_chatmessage():
     add_operation_in_journal('add_chatmessage')
-    userID = int(request.form["ClientID"])
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
+    token = str(request.form["ClientToken"])    
+    if check_token(token):
+        user = mongo.db["Persons"].find_one({"Token":token})
         OrderID = int(request.form["OrderID"])
         Message = request.form["Message"]
         newchatmessage = {}
         newchatmessage["_id"] = (get_max_id("ChatMessages")) + 1
-        newchatmessage["Author"] = find_by_id(userID, "Persons")
+        newchatmessage["Author"] = user
         newchatmessage["Order"] = find_by_id(OrderID, "Orders")
         newchatmessage["Message"] = Message
         newchatmessage["Date"] = datetime.datetime.now()
@@ -89,9 +92,8 @@ def find_by_id(id, collection):
 @app.route("/read_order", methods=['GET'])            
 def read_order():
     add_operation_in_journal('read_order')
-    userID = int(request.headers["userID"])
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
+    token = str(request.headers["userToken"])
+    if check_token(token):
         orderID = int(request.headers["OrderID"])
         x = mongo.db["Orders"].find_one({"_id":orderID})
         content = dumps(x, default = myconverter)
@@ -128,13 +130,13 @@ def read_sales():
 @app.route("/read_orders", methods=['GET'])
 def read_orders():
     add_operation_in_journal('read_orders')
-    userID = int(request.headers["userID"])
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
+    token = str(request.headers["userToken"])
+    if check_token(token):
+        user = mongo.db["Persons"].find_one({"Token":token})
         col = mongo.db["Orders"]
-        for x in col.find({"Client._id":userID}):
+        for x in col.find({"Client._id":user["_id"]}):
             print(x)
-        cursor = col.find({"Client._id":userID})
+        cursor = col.find({"Client._id":user["_id"]})
         content = dumps(cursor, default = myconverter)
         return content
     else:
@@ -144,30 +146,30 @@ def read_orders():
 @app.route("/read_orders_by_date", methods=['GET'])
 def read_orders_by_date():
     add_operation_in_journal('read_orders_by_date')
-    userID = int(request.headers["userID"])
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
+    token = str(request.headers["Token"])    
+    if check_token(token):
+        user = mongo.db["Persons"].find_one({"Token":token})
         stringdatestart = request.headers["StartDate"]
         stringdateend = request.headers["EndDate"]
         date1 = stringdatestart.split(',')
         date2 = stringdateend.split(',')
         from_date = datetime.datetime(int(date1[0]), int(date1[1]), int(date1[2]))
         to_date = datetime.datetime(int(date2[0]), int(date2[1]), int(date2[2]))
-        cursor = mongo.db["Orders"].find({"Date": {"$gte": from_date, "$lt": to_date}, "Client._id":userID})
+        cursor = mongo.db["Orders"].find({"Date": {"$gte": from_date, "$lt": to_date}, "Client._id":user["_id"]})
         content = dumps(cursor, default = myconverter)
         return content
 
 @app.route("/read_chatmessages", methods=['GET'])
 def read_chatmessages():
     add_operation_in_journal('read_chatmessages')
-    userID = int(request.headers["userID"])
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
+    token = str(request.headers["userToken"])    
+    if check_token(token):
+        user = mongo.db["Persons"].find_one({"Token":token})
         orderID = int(request.headers["orderID"])
         col = mongo.db["ChatMessages"]
         for x in col.find({"Order._id":orderID}):
             print(x)
-        cursor = col.find()
+        cursor = col.find({"Order._id":orderID})
         content = dumps(cursor)
         return content
 
@@ -195,15 +197,15 @@ def authorization():
         x["Token"] = token
         x["TokenDate"] = datetime.datetime.now()
         mongo.db["Persons"].save(x)
-        return dumps(x)
+        return token
     else: 
         return "Ошибка авторизации"
 
 @app.route("/logout", methods=['POST'])
 def logout():
     add_operation_in_journal('logout')
-    userID = int(request.form['UserID'])
-    x = find_by_id(userID, "Persons")
+    token = str(request.form['Token'])
+    x = mongo.db["Persons"].find_one({"Token":token})
     x["Token"] = None
     x["TokenDate"] = None                
     mongo.db["Persons"].save(x)
@@ -212,11 +214,10 @@ def logout():
 @app.route("/changepass", methods=['POST'])
 def changepass():
     add_operation_in_journal('changepass')
-    userID = int(request.form['UserId'])
-    password = request.form['Password']
-    user = mongo.db["Persons"].find_one({"_id":userID})
-    if check_token(user):
-            x = mongo.db["Persons"].find_one({"_id":userID})              
+    token = str(request.form['Token'])
+    password = request.form['Password']    
+    if check_token(token):            
+            x = mongo.db["Persons"].find_one({"Token":token})              
             x["Password"] = password
             mongo.db["Persons"].save(x)
             print("Попытка смены пароля прошла успешно ")

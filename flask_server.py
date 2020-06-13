@@ -34,14 +34,15 @@ def check_token(token):
     col = mongo.db["Persons"].find_one({"Token":str(token)})
     if token == "":
         return False
-    if col:
-        chekingToken = col["Token"]
-        if chekingToken == token:
-            return True
-        else: 
-            return False
     else:
-        return False
+        if col:
+            chekingToken = col["Token"]
+            if chekingToken == token:
+                return True
+            else: 
+                return False
+        else:
+            return False
 
 @app.route("/add_order",  methods=['POST'])
 def add_order():

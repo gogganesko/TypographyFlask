@@ -30,12 +30,12 @@ app.config["MONGO_URI"] = "mongodb://localhost:27017/Typography"
 mongo = PyMongo(app)
 
 def check_token(token):
-    chekingToken = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))    
-    col = mongo.db["Persons"].find_one({"Token":str(token)})
-    if token == "":
+    if token == None:
         return False
     else:
+        col = mongo.db["Persons"].find_one({"Token":str(token)})
         if col:
+            chekingToken = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))    
             chekingToken = col["Token"]
             if chekingToken == token:
                 return True

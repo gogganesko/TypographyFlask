@@ -34,8 +34,7 @@ def check_token(token):
         return False
     else:
         col = mongo.db["Persons"].find_one({"Token":str(token)})
-        if col:
-            chekingToken = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))    
+        if col: 
             chekingToken = col["Token"]
             if chekingToken == token:
                 return True

@@ -32,6 +32,8 @@ mongo = PyMongo(app)
 def check_token(token):
     chekingToken = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))    
     col = mongo.db["Persons"].find_one({"Token":str(token)})
+    if token == "":
+        return False
     if col:
         chekingToken = col["Token"]
         if chekingToken == token:
@@ -44,9 +46,9 @@ def check_token(token):
 @app.route("/add_order",  methods=['POST'])
 def add_order():
     add_operation_in_journal('add_order')
-    token = str(request.form["ClientToken"])
-    user = mongo.db["Persons"].find_one({"Token":token})
-    if check_token(user["Token"]):
+    token = str(request.form["ClientToken"])    
+    if check_token(token):
+        user = mongo.db["Persons"].find_one({"Token":token})
         neworder = {}
         ServiceID = int(request.form['ServiceID'])
         Count = int(request.form["Count"])
